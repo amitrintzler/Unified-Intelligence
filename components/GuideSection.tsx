@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Laptop, Cpu, Check, FileCode, Braces } from 'lucide-react';
+import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Laptop, Cpu, Check, FileCode, Braces, Sparkles, FolderTree, MessageSquarePlus, Command, ArrowRight } from 'lucide-react';
 
 type AgentRole = 'productOwner' | 'architect' | 'developer' | 'qa' | 'security' | 'refactor' | 'devops' | 'techWriter' | 'database';
 
@@ -211,12 +211,20 @@ if (isExpired(token)) return error("Token expired");
                     <span className="text-[10px] md:text-xs font-bold text-orange-200 tracking-wider bg-black/40 px-2 py-0.5 rounded-full border border-white/5">COPILOT</span>
                  </div>
                  
-                 {/* Monitor 4: Codex */}
+                 {/* Monitor 4: Claude */}
                  <div className="flex flex-col items-center gap-2 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
                     <div className="w-16 h-12 md:w-24 md:h-16 bg-slate-900/90 backdrop-blur border border-green-500/30 rounded-lg shadow-[0_0_15px_rgba(34,197,94,0.3)] flex items-center justify-center hover:scale-110 transition-transform duration-300">
-                       <Terminal className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
+                       <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
                     </div>
-                    <span className="text-[10px] md:text-xs font-bold text-green-200 tracking-wider bg-black/40 px-2 py-0.5 rounded-full border border-white/5">CODEX</span>
+                    <span className="text-[10px] md:text-xs font-bold text-green-200 tracking-wider bg-black/40 px-2 py-0.5 rounded-full border border-white/5">CLAUDE</span>
+                 </div>
+
+                 {/* Monitor 5: Codex */}
+                 <div className="flex flex-col items-center gap-2 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                    <div className="w-16 h-12 md:w-24 md:h-16 bg-slate-900/90 backdrop-blur border border-cyan-500/30 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.3)] flex items-center justify-center hover:scale-110 transition-transform duration-300">
+                       <Terminal className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
+                    </div>
+                    <span className="text-[10px] md:text-xs font-bold text-cyan-200 tracking-wider bg-black/40 px-2 py-0.5 rounded-full border border-white/5">CODEX</span>
                  </div>
             </div>
 
@@ -311,22 +319,114 @@ if (isExpired(token)) return error("Token expired");
         </div>
       </div>
 
-      {/* Strategy Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {[
-          { icon: Code2, title: "Daily Driver", tool: "Cursor", desc: "Micro-optimizations & Linting", color: "text-blue-400" },
-          { icon: BrainCircuit, title: "The Architect", tool: "Agents", desc: "Feature building & Refactoring", color: "text-purple-400" },
-          { icon: Zap, title: "The Assistant", tool: "Copilot", desc: "Autocomplete & Explanations", color: "text-orange-400" }
-        ].map((card, i) => (
-          <div key={i} className="bg-surface/20 backdrop-blur-sm border border-white/5 p-6 rounded-2xl hover:bg-surface/30 transition-all group">
-            <div className={`w-12 h-12 rounded-xl bg-slate-800/50 flex items-center justify-center mb-4 ${card.color} group-hover:scale-110 transition-transform`}>
-              <card.icon className="w-6 h-6" />
+      {/* Deployment & Execution Protocol Guide (Replaces old Strategy Grid) */}
+      <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0B1120]">
+        {/* Background Image (Simulating Nano Banana / Abstract AI) */}
+        <div className="absolute inset-0">
+            <img 
+                src="https://images.unsplash.com/photo-1676299000036-96f63163370b?q=80&w=2000&auto=format&fit=crop" 
+                alt="Abstract Generative AI Background" 
+                className="w-full h-full object-cover opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0B1120] via-[#0B1120]/90 to-transparent" />
+        </div>
+
+        <div className="relative z-10 p-8 md:p-12">
+            <h3 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+              <Command className="w-8 h-8 text-primary" />
+              The UniGen Workflow: From Generation to Execution
+            </h3>
+            <p className="text-slate-300 text-lg mb-12 max-w-3xl leading-relaxed">
+              Generating the files is just step one. Here is how to <strong>orchestrate</strong> your new AI team. 
+              Follow this protocol to ensure your IDEs utilize the full cognitive depth of the configuration.
+            </p>
+
+            <div className="grid gap-12">
+                
+                {/* Step 1: Context Injection */}
+                <div className="relative pl-8 border-l-2 border-slate-700">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    <h4 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                       <FolderTree className="w-5 h-5 text-blue-400" />
+                       Step 1: Injection (Where to put files)
+                    </h4>
+                    <div className="grid md:grid-cols-3 gap-4">
+                       <div className="bg-slate-900/80 border border-white/10 p-4 rounded-xl">
+                          <div className="text-xs font-bold text-slate-500 uppercase mb-1">Project Root</div>
+                          <div className="text-white font-mono text-sm mb-2 flex items-center gap-2"><FileCode className="w-4 h-4 text-blue-400"/> .cursorrules</div>
+                          <p className="text-xs text-slate-400">Directs Cursor's Autopilot. Place this in the main folder of your repo.</p>
+                       </div>
+                       <div className="bg-slate-900/80 border border-white/10 p-4 rounded-xl">
+                          <div className="text-xs font-bold text-slate-500 uppercase mb-1">Project Root</div>
+                          <div className="text-white font-mono text-sm mb-2 flex items-center gap-2"><Cpu className="w-4 h-4 text-purple-400"/> agents.md</div>
+                          <p className="text-xs text-slate-400">The Brain. Place in root. Indexed by Composer/Windsurf for deep reasoning.</p>
+                       </div>
+                       <div className="bg-slate-900/80 border border-white/10 p-4 rounded-xl">
+                          <div className="text-xs font-bold text-slate-500 uppercase mb-1">.github/ Folder</div>
+                          <div className="text-white font-mono text-sm mb-2 flex items-center gap-2"><Sparkles className="w-4 h-4 text-orange-400"/> copilot-instructions.md</div>
+                          <p className="text-xs text-slate-400">Directs GitHub Copilot. Create a .github folder if missing.</p>
+                       </div>
+                    </div>
+                </div>
+
+                {/* Step 2: Activation Loop */}
+                <div className="relative pl-8 border-l-2 border-slate-700">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                    <h4 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                       <MessageSquarePlus className="w-5 h-5 text-green-400" />
+                       Step 2: The Active Loop (How to Interact)
+                    </h4>
+                    <p className="text-slate-300 text-sm mb-6">
+                       Don't just "chat". Use the <strong>Roles</strong> you generated to trigger specific behaviors.
+                    </p>
+                    
+                    <div className="space-y-4">
+                       {/* Interaction Example 1 */}
+                       <div className="bg-slate-900/80 border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-6 items-start md:items-center group hover:border-green-500/30 transition-colors">
+                          <div className="shrink-0">
+                             <div className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-xs font-bold border border-purple-500/30">PLANNING PHASE</div>
+                          </div>
+                          <div className="flex-1">
+                             <p className="text-sm text-slate-300 mb-2">When starting a new feature, don't code yet. Summon the Architect.</p>
+                             <div className="bg-black/40 rounded-lg p-2 font-mono text-xs text-green-400 flex items-center gap-2">
+                                <span className="text-slate-500">$</span> @Architect Analyze the current auth flow and propose a schema for 2FA.
+                             </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-green-400 transition-colors hidden md:block" />
+                       </div>
+
+                       {/* Interaction Example 2 */}
+                       <div className="bg-slate-900/80 border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-6 items-start md:items-center group hover:border-blue-500/30 transition-colors">
+                          <div className="shrink-0">
+                             <div className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/30">CODING PHASE</div>
+                          </div>
+                          <div className="flex-1">
+                             <p className="text-sm text-slate-300 mb-2">Now build it. The <code className="text-white">.cursorrules</code> file ensures no lint errors occur.</p>
+                             <div className="bg-black/40 rounded-lg p-2 font-mono text-xs text-blue-400 flex items-center gap-2">
+                                <span className="text-slate-500">$</span> @Developer Implement the 2FA schema proposed by the Architect.
+                             </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-blue-400 transition-colors hidden md:block" />
+                       </div>
+
+                       {/* Interaction Example 3 */}
+                       <div className="bg-slate-900/80 border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-6 items-start md:items-center group hover:border-red-500/30 transition-colors">
+                          <div className="shrink-0">
+                             <div className="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-xs font-bold border border-red-500/30">QUALITY PHASE</div>
+                          </div>
+                          <div className="flex-1">
+                             <p className="text-sm text-slate-300 mb-2">Before committing, ensure strict TDD compliance.</p>
+                             <div className="bg-black/40 rounded-lg p-2 font-mono text-xs text-red-400 flex items-center gap-2">
+                                <span className="text-slate-500">$</span> @QA Generate Jest tests for the new 2FA service.
+                             </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-red-400 transition-colors hidden md:block" />
+                       </div>
+                    </div>
+                </div>
+
             </div>
-            <h4 className="text-lg font-bold text-white mb-1">{card.title}</h4>
-            <p className={`text-sm font-bold ${card.color} mb-2`}>{card.tool}</p>
-            <p className="text-slate-400 text-sm">{card.desc}</p>
-          </div>
-        ))}
+        </div>
       </div>
 
       {/* Interactive Role Explorer */}
@@ -389,35 +489,6 @@ if (isExpired(token)) return error("Token expired");
              </div>
           </div>
         </div>
-      </div>
-
-      {/* Got them all? Strategy */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/5 rounded-3xl p-8 md:p-12 relative overflow-hidden">
-         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-         <div className="relative z-10 max-w-4xl mx-auto text-center">
-            <h3 className="text-3xl font-bold text-white mb-6">Got them all installed?</h3>
-            <p className="text-slate-300 mb-8 text-lg">
-              Don't choose just one. The best developers use a <strong>Hybrid Strategy</strong>. 
-              Let Cursor handle the lines, let Agents handle the architecture, and let Copilot explain the bugs.
-            </p>
-            
-            <div className="bg-black/30 backdrop-blur border border-white/10 rounded-xl p-6 text-left">
-               <div className="grid md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-white/10">
-                  <div className="px-4">
-                     <span className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2 block">Step 1: Write</span>
-                     <p className="text-slate-300 text-sm">Use <strong>Cursor</strong> with <code className="text-white bg-white/10 px-1 rounded">.cursorrules</code> for fast, lint-free code editing and immediate refactoring.</p>
-                  </div>
-                  <div className="px-4 pt-4 md:pt-0">
-                     <span className="text-purple-400 font-bold text-sm uppercase tracking-wider mb-2 block">Step 2: Plan</span>
-                     <p className="text-slate-300 text-sm">Use <strong>Agents</strong> with <code className="text-white bg-white/10 px-1 rounded">agents.md</code> to scaffold new features, plan database schemas, and write test suites.</p>
-                  </div>
-                  <div className="px-4 pt-4 md:pt-0">
-                     <span className="text-orange-400 font-bold text-sm uppercase tracking-wider mb-2 block">Step 3: Review</span>
-                     <p className="text-slate-300 text-sm">Use <strong>Copilot</strong> with <code className="text-white bg-white/10 px-1 rounded">instructions.md</code> to explain complex legacy code and suggest quick fixes.</p>
-                  </div>
-               </div>
-            </div>
-         </div>
       </div>
 
     </div>

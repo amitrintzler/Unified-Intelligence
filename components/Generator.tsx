@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IdeType, TemplateType, AnalysisResponse, GeneratedFile } from '../types';
-import { generateRulesStream, analyzeContext } from '../services/aiService';
-import { Copy, Check, Wand2, Loader2, AlertCircle, MessageSquare, ArrowRight, Code, FileCode, Sparkles, Cpu, Terminal, FileText, Cloud, Database, Server, Globe, Layout, Box, Layers } from 'lucide-react';
+import { IdeType, TemplateType, AnalysisResponse, GeneratedFile, AiProvider, AiConfiguration } from '../types';
+import { generateRulesStream, analyzeContext } from '../services/geminiService';
+import { Copy, Check, Wand2, Loader2, AlertCircle, MessageSquare, ArrowRight, Code, FileCode, Sparkles, Cpu, Terminal, FileText, Cloud, Database, Server, Globe, Layers, Box, Settings2 } from 'lucide-react';
 
 const Generator: React.FC = () => {
   // State Machine
@@ -11,6 +11,12 @@ const Generator: React.FC = () => {
   const [context, setContext] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  
+  // AI Configuration State
+  const [aiConfig, setAiConfig] = useState<AiConfiguration>({
+    provider: AiProvider.GEMINI,
+  });
+  const [showAiSettings, setShowAiSettings] = useState(false);
   
   const [rawOutput, setRawOutput] = useState('');
   const [parsedFiles, setParsedFiles] = useState<GeneratedFile[]>([]);
@@ -186,7 +192,8 @@ const Generator: React.FC = () => {
         ide,
         template: TemplateType.DETECT_AUTO,
         context,
-        answers
+        answers,
+        aiConfig
       }, (chunk) => {
         accumulated += chunk;
         setRawOutput(accumulated);
@@ -198,7 +205,7 @@ const Generator: React.FC = () => {
       });
       setStep('done');
     } catch (err) {
-      setError("Generation failed.");
+      setError(err instanceof Error ? err.message : "Generation failed.");
       setStep('input');
     }
   };
@@ -262,9 +269,80 @@ const Generator: React.FC = () => {
            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
            {step === 'input' || step === 'analyzing' ? (
-             <div className="flex flex-col h-full animate-fade-in">
+             <div className="flex flex-col h-full animate-fade-in scrollbar-thin overflow-y-auto pr-2">
+                
+                {/* AI Provider Settings Toggle */}
+                <div className="mb-6 bg-black/20 rounded-xl p-3 border border-white/5">
+                   <button 
+                     onClick={() => setShowAiSettings(!showAiSettings)}
+                     className="flex items-center justify-between w-full text-xs font-bold text-slate-400 uppercase tracking-wider hover:text-white transition-colors"
+                   >
+                      <span className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> Generation Engine</span>
+                      <span className={`transition-transform duration-300 ${showAiSettings ? 'rotate-180' : ''}`}>▼</span>
+                   </button>
+                   
+                   {showAiSettings && (
+                     <div className="mt-3 space-y-3 animate-fade-in">
+                        <div>
+                          <label className="text-[10px] text-slate-500 block mb-1">Model Provider</label>
+                          <select 
+                            value={aiConfig.provider}
+                            onChange={(e) => setAiConfig({...aiConfig, provider: e.target.value as AiProvider})}
+                            className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-primary"
+                          >
+                            {Object.values(AiProvider).map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+
+                        {aiConfig.provider !== AiProvider.GEMINI && (
+                          <div>
+                             <label className="text-[10px] text-slate-500 block mb-1">API Key (Stored Locally)</label>
+                             <input 
+                               type="password"
+                               placeholder={`Enter ${aiConfig.provider.split(' ')[0]} Key`}
+                               value={aiConfig.apiKey || ''}
+                               onChange={(e) => setAiConfig({...aiConfig, apiKey: e.target.value})}
+                               className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-primary"
+                             />
+                             <p className="text-[9px] text-slate-500 mt-1">
+                               Using {aiConfig.provider}. Key is never stored on our servers.
+                             </p>
+                          </div>
+                        )}
+
+                        {aiConfig.provider === AiProvider.AZURE && (
+                          <>
+                            <input 
+                              type="text"
+                              placeholder="Endpoint (https://...)"
+                              value={aiConfig.endpoint || ''}
+                              onChange={(e) => setAiConfig({...aiConfig, endpoint: e.target.value})}
+                              className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-primary"
+                            />
+                            <div className="flex gap-2">
+                              <input 
+                                type="text"
+                                placeholder="Deployment"
+                                value={aiConfig.deployment || ''}
+                                onChange={(e) => setAiConfig({...aiConfig, deployment: e.target.value})}
+                                className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-primary"
+                              />
+                              <input 
+                                type="text"
+                                placeholder="Version (2024-02-15-preview)"
+                                value={aiConfig.apiVersion || ''}
+                                onChange={(e) => setAiConfig({...aiConfig, apiVersion: e.target.value})}
+                                className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none focus:border-primary"
+                              />
+                            </div>
+                          </>
+                        )}
+                     </div>
+                   )}
+                </div>
+
                 <div className="mb-6">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Target Environment</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Target Platform</label>
                   <div className="relative">
                     <select 
                       value={ide}
@@ -295,189 +373,178 @@ const Generator: React.FC = () => {
                              <tpl.icon className={`w-4 h-4 ${tpl.color}`} />
                              <span className="text-[11px] font-bold text-slate-200 leading-tight">{tpl.label}</span>
                            </div>
-                           <span className="text-[10px] text-slate-400 leading-tight opacity-80">{tpl.desc}</span>
+                           <span className="text-[10px] text-slate-500 leading-tight line-clamp-2">{tpl.desc}</span>
                         </button>
                       ))}
                    </div>
                 </div>
+             </div>
+           ) : null}
 
-                <div className="flex-1 flex flex-col min-h-[150px] mb-6">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Project Context</label>
-                  <div className="relative flex-1">
-                    <textarea
-                      value={context}
-                      onChange={(e) => setContext(e.target.value)}
-                      placeholder="// Paste package.json or describe your stack...
-{
-  'name': 'my-app',
-  'dependencies': {
-    'next': '14.0.0',
-    'react': '18.0.0'
-  }
-}"
-                      className="w-full h-full bg-slate-900/50 border border-slate-700 text-slate-300 rounded-xl p-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none font-mono text-xs leading-relaxed scrollbar-thin"
-                    />
-                  </div>
+           {/* Steps Logic for Left Panel (Info/Status) */}
+            {step === 'questions' && (
+              <div className="flex flex-col h-full animate-fade-in">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                   <MessageSquare className="w-5 h-5 text-yellow-400" />
+                   Clarifications Needed
+                </h3>
+                <p className="text-sm text-slate-400 mb-6">
+                   The AI needs a bit more detail to generate the perfect configuration for your stack.
+                </p>
+                <div className="space-y-4 flex-1 overflow-y-auto pr-2 scrollbar-thin">
+                   {analysis?.questions?.map((q, idx) => (
+                     <div key={idx} className="space-y-2">
+                        <label className="text-xs font-bold text-slate-300 block">{q}</label>
+                        <input 
+                          type="text"
+                          value={answers[q] || ''}
+                          onChange={(e) => setAnswers({...answers, [q]: e.target.value})}
+                          className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-primary outline-none"
+                          placeholder="Type your answer..."
+                        />
+                     </div>
+                   ))}
                 </div>
-
-                <button
-                  onClick={handleAnalyze}
-                  disabled={step === 'analyzing'}
-                  className="w-full bg-primary hover:bg-blue-600 disabled:bg-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-900/20 flex justify-center items-center gap-2 group shrink-0"
-                >
-                  {step === 'analyzing' ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5 group-hover:text-yellow-300 transition-colors" />
-                      Analyze Project
-                    </>
-                  )}
-                </button>
-             </div>
-           ) : step === 'questions' ? (
-             <div className="flex flex-col h-full animate-fade-in">
-               <div className="mb-6 flex items-center gap-3">
-                 <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-400">
-                   <AlertCircle className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <h3 className="font-bold text-white">Missing Details</h3>
-                    <p className="text-xs text-slate-400">Help us refine the agents.</p>
-                 </div>
-               </div>
-               
-               <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-6 scrollbar-thin">
-                  {analysis?.questions?.map((q, idx) => (
-                    <div key={idx} className="group">
-                      <label className="block text-xs font-medium text-slate-300 mb-1.5 group-hover:text-primary transition-colors">{q}</label>
-                      <input
-                        type="text"
-                        value={answers[q]}
-                        onChange={(e) => setAnswers(prev => ({...prev, [q]: e.target.value}))}
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-primary outline-none transition-all"
-                        placeholder="Type answer..."
-                      />
-                    </div>
-                  ))}
-               </div>
-
-               <div className="flex gap-3">
-                 <button onClick={() => setStep('input')} className="px-4 py-3 rounded-xl text-slate-400 hover:bg-white/5 transition-colors text-sm font-medium">Back</button>
-                 <button onClick={handleGenerateRules} className="flex-1 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl py-3 shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
-                   Generate <ArrowRight className="w-4 h-4" />
-                 </button>
-               </div>
-             </div>
-           ) : (
-             <div className="flex flex-col h-full items-center justify-center text-center animate-fade-in">
-                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center text-green-400 mb-4 border border-green-500/20">
-                  <Check className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">Ready!</h3>
-                <p className="text-sm text-slate-400 mb-6">Your configuration has been generated successfully.</p>
-                <button onClick={() => setStep('input')} className="text-primary hover:text-blue-400 text-sm font-medium flex items-center gap-1">
-                   <Wand2 className="w-3 h-3" /> Start New Project
-                </button>
-             </div>
-           )}
-
-           {error && (
-            <div className="absolute bottom-4 left-4 right-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT PANEL: Code Editor Look */}
-      <div className="flex-1 bg-[#1e1e1e] border border-slate-700/50 rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
-        {/* Mac-like Title Bar */}
-        <div className="h-12 bg-[#252526] border-b border-[#333] flex items-center px-4 justify-between">
-          <div className="flex gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-            <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-            <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-          </div>
-          <div className="flex gap-1 overflow-x-auto max-w-[60%] no-scrollbar">
-             {parsedFiles.length > 0 ? parsedFiles.map((file, idx) => (
-               <button
-                 key={idx}
-                 onClick={() => setActiveFileTab(idx)}
-                 className={`px-3 py-1 text-xs rounded-md flex items-center gap-1.5 transition-all ${
-                   activeFileTab === idx 
-                     ? 'bg-[#37373d] text-white' 
-                     : 'text-gray-500 hover:text-gray-300 hover:bg-[#2d2d2d]'
-                 }`}
-               >
-                 {getFileIcon(file.fileName)}
-                 <span className="truncate max-w-[100px]">{file.fileName}</span>
-               </button>
-             )) : (
-               <div className="text-xs text-gray-500 font-mono flex items-center gap-2">
-                 <Cpu className="w-3 h-3" /> awaiting_input...
-               </div>
-             )}
-          </div>
-          <div className="w-16 flex justify-end">
-             {(parsedFiles.length > 0 || rawOutput) && step !== 'analyzing' && (
                 <button 
-                  onClick={copyToClipboard}
-                  className={`p-1.5 rounded-md transition-all ${copied ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:bg-white/10'}`}
-                  title="Copy content"
+                   onClick={handleGenerateRules}
+                   className="mt-4 w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                   <Wand2 className="w-4 h-4" />
+                   Generate Configuration
                 </button>
-             )}
-          </div>
-        </div>
+              </div>
+            )}
 
-        {/* Editor Content */}
-        <div className="flex-1 relative bg-[#1e1e1e] overflow-hidden">
-           {!rawOutput && step !== 'generating' && (
-             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-700 pointer-events-none select-none">
-                <Code className="w-24 h-24 opacity-10 mb-4" />
-                <p className="text-lg font-medium opacity-50">Generate your agent configuration</p>
-             </div>
-           )}
-           
-           <div 
-            ref={outputRef}
-            className="absolute inset-0 overflow-auto p-6 font-mono text-sm text-[#d4d4d4] scrollbar-thin leading-relaxed"
-           >
-             {step === 'generating' && parsedFiles.length === 0 && (
-                <div className="flex items-center gap-3 text-primary animate-pulse">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="font-mono">Generating configuration files...</span>
-                </div>
-             )}
-             
-             <pre className="outline-none min-w-full">
-               {parsedFiles.length > 0 
-                 ? parsedFiles[activeFileTab]?.content 
-                 : rawOutput}
-             </pre>
-           </div>
-        </div>
+            {(step === 'generating' || step === 'done') && (
+              <div className="flex flex-col h-full animate-fade-in justify-center items-center text-center p-4">
+                 {step === 'generating' ? (
+                   <>
+                     <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                     <h3 className="text-xl font-bold text-white mb-2">Generating...</h3>
+                     <p className="text-slate-400 text-sm">Crafting your {ide} configuration files based on best practices.</p>
+                   </>
+                 ) : (
+                   <>
+                     <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-6 border border-green-500/20">
+                        <Check className="w-8 h-8 text-green-400" />
+                     </div>
+                     <h3 className="text-xl font-bold text-white mb-2">Generation Complete</h3>
+                     <p className="text-slate-400 text-sm mb-6">Your configuration files are ready to be added to your project.</p>
+                     <button 
+                       onClick={() => setStep('input')}
+                       className="px-6 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-colors border border-white/5"
+                     >
+                        Start New Project
+                     </button>
+                   </>
+                 )}
+              </div>
+            )}
 
-        {/* Footer Status Bar */}
-        <div className="h-6 bg-[#007acc] text-white text-[10px] flex items-center px-3 gap-4 select-none">
-           <div className="flex items-center gap-1"><Code className="w-3 h-3" /> TypeScript React</div>
-           <div className="flex items-center gap-1"><Check className="w-3 h-3" /> Prettier</div>
-           <div className="flex-1 text-right opacity-80">Ln 1, Col 1</div>
         </div>
       </div>
+
+      {/* RIGHT PANEL: Input / Output Area */}
+      <div className="flex-1 bg-surface/30 backdrop-blur-xl border border-white/10 rounded-3xl p-1 overflow-hidden flex flex-col relative shadow-2xl">
+         {/* Header / Tabs */}
+         <div className="bg-black/20 border-b border-white/5 p-2 flex items-center justify-between">
+            <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+               {step === 'done' && parsedFiles.length > 0 ? (
+                  parsedFiles.map((file, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveFileTab(idx)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                        activeFileTab === idx 
+                          ? 'bg-white/10 text-white shadow-inner' 
+                          : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <FileCode className="w-3 h-3" />
+                      {file.fileName}
+                    </button>
+                  ))
+               ) : (
+                 <div className="px-3 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <Code className="w-4 h-4" />
+                    {step === 'input' ? 'Context Input' : 'Generator Output'}
+                 </div>
+               )}
+            </div>
+
+            {(step === 'done' || step === 'generating') && (
+              <button 
+                onClick={copyToClipboard}
+                className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                title="Copy to Clipboard"
+              >
+                 {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            )}
+         </div>
+
+         {/* Content Area */}
+         <div className="flex-1 relative bg-[#0f1117]">
+            {step === 'input' || step === 'analyzing' || step === 'questions' ? (
+               <div className="absolute inset-0 flex flex-col">
+                  <textarea
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                    placeholder={`Paste your package.json, file structure, or describe your stack...
+Example:
+"Next.js project with Tailwind and Supabase. I need a cursor rules file for writing clean React components."`}
+                    className="flex-1 w-full bg-transparent p-6 text-sm font-mono text-slate-300 resize-none outline-none placeholder:text-slate-700"
+                    disabled={step === 'analyzing'}
+                  />
+                  <div className="p-4 border-t border-white/5 bg-black/20 flex justify-end">
+                     <button 
+                       onClick={handleAnalyze}
+                       disabled={!context.trim() || step === 'analyzing'}
+                       className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                         !context.trim() || step === 'analyzing'
+                           ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                           : 'bg-primary hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                       }`}
+                     >
+                        {step === 'analyzing' ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            Analyze & Generate
+                          </>
+                        )}
+                     </button>
+                  </div>
+               </div>
+            ) : (
+               // Output View
+               <div className="absolute inset-0 overflow-auto custom-scrollbar" ref={outputRef}>
+                  <pre className="p-6 text-sm font-mono text-blue-100 leading-relaxed whitespace-pre-wrap">
+                    {step === 'done' && parsedFiles.length > 0 
+                      ? parsedFiles[activeFileTab]?.content 
+                      : rawOutput
+                    }
+                  </pre>
+               </div>
+            )}
+
+            {/* Error Overlay */}
+            {error && (
+              <div className="absolute bottom-4 left-4 right-4 bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-xl flex items-start gap-3 backdrop-blur-xl animate-fade-in-up">
+                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                 <div className="flex-1 text-sm">{error}</div>
+                 <button onClick={() => setError(null)} className="hover:text-white">×</button>
+              </div>
+            )}
+         </div>
+      </div>
+
     </div>
   );
 };
-
-// Helper for icons
-const getFileIcon = (name: string) => {
-  if (name.includes('cursorrules')) return <FileCode className="w-3 h-3 text-blue-400" />;
-  if (name.includes('agents')) return <Cpu className="w-3 h-3 text-purple-400" />;
-  if (name.includes('copilot')) return <Sparkles className="w-3 h-3 text-orange-400" />;
-  return <FileText className="w-3 h-3 text-gray-400" />;
-}
 
 export default Generator;

@@ -1,5 +1,5 @@
 {
-  "name": "AgentRules.ai",
+  "name": "UniGen",
   "description": "A comprehensive guide and generator for AI IDE context files like .cursorrules, agents.md, and Copilot instructions.",
   "requestFramePermissions": []
 }

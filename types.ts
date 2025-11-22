@@ -19,11 +19,28 @@ export enum TemplateType {
   GENERAL = 'General / Other'
 }
 
+export enum AiProvider {
+  GEMINI = 'Google Gemini (3 Pro Preview)',
+  OPENAI = 'OpenAI (GPT-5.1)',
+  AZURE = 'Azure OpenAI (GPT-5.1)',
+  CLAUDE = 'Anthropic Claude (4.5 Sonnet)',
+  CODEX_CLI = 'Codex CLI (Bleeding Edge)'
+}
+
+export interface AiConfiguration {
+  provider: AiProvider;
+  apiKey?: string;
+  endpoint?: string; // For Azure/Custom
+  deployment?: string; // For Azure
+  apiVersion?: string; // For Azure
+}
+
 export interface GenerationRequest {
   ide: IdeType;
   template: TemplateType;
-  context: string; // Renamed from customInstructions for clarity
+  context: string; 
   answers?: Record<string, string>;
+  aiConfig: AiConfiguration;
 }
 
 export interface AnalysisResponse {

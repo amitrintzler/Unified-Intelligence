@@ -1,5 +1,5 @@
 import React from 'react';
-import { Github, Star, ThumbsUp, ThumbsDown, ArrowUpRight, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Github, Star, ThumbsUp, ThumbsDown, ArrowUpRight, ShieldCheck, ExternalLink, GitPullRequest } from 'lucide-react';
 
 const References: React.FC = () => {
   return (
@@ -123,13 +123,36 @@ const References: React.FC = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 mb-6 ring-1 ring-blue-500/40 shadow-lg shadow-blue-500/20">
                 <ShieldCheck className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">The AgentRules Difference</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">The UniGen Difference</h3>
             <p className="text-slate-300 max-w-3xl mx-auto leading-relaxed text-lg">
                 Repositories like <em>awesome-cursorrules</em> are excellent dictionaries for <strong>Syntax</strong>. 
                 <br className="hidden md:block" />
                 We focus on <strong>Cognition</strong>. We take those syntax rules and wrap them in 
                 Enterprise-grade XML architectures that force the AI to <em>Think</em>, <em>Plan</em>, and <em>Act</em> like a Senior Engineer.
             </p>
+          </div>
+       </div>
+
+       {/* Contribution Section */}
+       <div className="border-t border-slate-700/50 pt-12">
+          <div className="bg-slate-900/50 rounded-2xl p-8 flex flex-col items-center text-center border border-white/5">
+            <div className="p-3 bg-white/5 rounded-full mb-4 text-slate-400">
+               <GitPullRequest className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Have a Reference to Add?</h3>
+            <p className="text-slate-400 mb-6 max-w-lg">
+               If you know of other high-quality configuration repositories or new AI tool references, 
+               please submit a Pull Request to our project repository.
+            </p>
+            <a 
+               href="https://github.com/amitrintzler/Unified-Intelligence" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold transition-colors border border-white/10"
+            >
+               <Github className="w-4 h-4" />
+               Contribute to Unified-Intelligence
+            </a>
           </div>
        </div>
 

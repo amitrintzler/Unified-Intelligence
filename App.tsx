@@ -51,7 +51,7 @@ const App: React.FC = () => {
       <footer className="border-t border-slate-800/50 bg-[#0B1120]/80 backdrop-blur-xl py-12 relative z-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
-            <p className="font-bold text-lg text-white tracking-tight">AgentRules.ai</p>
+            <p className="font-bold text-lg text-white tracking-tight">UniGen</p>
             <p className="text-slate-500 text-sm mt-1">Master the AI IDE workflow.</p>
           </div>
           
