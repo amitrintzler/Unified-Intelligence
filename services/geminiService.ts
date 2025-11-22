@@ -1,45 +1,26 @@
-import { GoogleGenAI } from "@google/genai";
-import { GenerationRequest, IdeType, AnalysisResponse, AiProvider } from "../types";
+import { GoogleGenAI, Type } from "@google/genai";
+import { GenerationRequest, IdeType, AnalysisResponse, AiProvider, AiConfiguration } from "../types";
 
-// Initialize Gemini Client (Default)
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-/**
- * Analyzes context - Uses Gemini 3 Pro Preview for deep reasoning on stack detection.
- */
-export const analyzeContext = async (context: string): Promise<AnalysisResponse> => {
-  if (!process.env.API_KEY) throw new Error("Internal API Key missing for Analysis");
-
-  const prompt = `
-    You are a Senior Architect analyzing a request to generate IDE context files.
-    
-    User Input Context: "${context}"
-    
-    Task:
-    1. Analyze if the input provides enough technical detail (Framework, Language, Testing strategy, Folder structure).
-    2. If the user pasted a package.json or file tree, that is usually sufficient -> Return "READY".
-    3. If vague (e.g., "Make rules for a website"), return "NEEDS_INFO" and ask specifically about:
-       - The testing framework (vital for Agents to run tests).
-       - The state management or key libraries.
-       - The preferred styling engine.
-    
-    Output JSON format:
-    {
-      "status": "READY" | "NEEDS_INFO",
-      "summary": "Brief summary of detected stack (e.g., Next.js 14, Jest, Tailwind)",
-      "questions": ["Question 1?", "Question 2?"] // Only if NEEDS_INFO
+// --- 1. Environment Abstraction (Vite + Node/Sandpack support) ---
+const Env = {
+  get: (key: string): string | undefined => {
+    // Check Vite standard env vars (import.meta.env) if available
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
+      return (import.meta as any).env[key];
     }
-  `;
-
-  const response = await genAI.models.generateContent({
-    model: 'gemini-3-pro-preview', // Upgraded to 3 Pro for better analysis
-    contents: prompt,
-    config: { responseMimeType: 'application/json' }
-  });
-
-  if (!response.text) throw new Error("Failed to analyze context");
-  return JSON.parse(response.text) as AnalysisResponse;
+    // Fallback to process.env (Node/Sandpack)
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    // Specific mapping for the default internal key often used in this env
+    if (key === 'VITE_GEMINI_API_KEY' && typeof process !== 'undefined' && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+    return undefined;
+  }
 };
+
+// --- 2. Prompt Engineering Helpers ---
 
 const getSystemPrompt = (ide: IdeType): string => {
   const base = "You are an expert AI Tooling Specialist.";
@@ -127,192 +108,256 @@ const constructPrompt = (request: GenerationRequest): string => {
       Delimiter: --- START OF FILE: agents.md ---
       `;
   } else {
-      // Generic fallback for single file types
       prompt += `\nGenerate the specific configuration file for ${request.ide}. Ensure strict syntax and best practices.\nDelimiter: --- START OF FILE: output ---`;
   }
 
   return prompt;
 }
 
+// --- 3. Provider Abstractions ---
+
+interface IContentGenerator {
+  generateStream(
+    prompt: string, 
+    systemPrompt: string, 
+    config: AiConfiguration, 
+    onChunk: (text: string) => void
+  ): Promise<void>;
+}
+
+// --- GEMINI IMPLEMENTATION ---
+class GeminiProvider implements IContentGenerator {
+  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
+    const key = config.apiKey || Env.get('VITE_GEMINI_API_KEY');
+    if (!key) throw new Error("Gemini API Key missing. Add VITE_GEMINI_API_KEY to .env or settings.");
+
+    const genAI = new GoogleGenAI({ apiKey: key });
+    
+    const responseStream = await genAI.models.generateContentStream({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.2,
+      }
+    });
+
+    for await (const chunk of responseStream) {
+      if (chunk.text) onChunk(chunk.text);
+    }
+  }
+}
+
+// --- OPENAI IMPLEMENTATION (Handles GPT-5.1 & Codex CLI) ---
+class OpenAIProvider implements IContentGenerator {
+  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
+    const key = config.apiKey || Env.get('VITE_OPENAI_API_KEY');
+    if (!key) throw new Error("OpenAI API Key missing. Add VITE_OPENAI_API_KEY to .env or settings.");
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-5.1', // Bleeding edge target
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`OpenAI API Error: ${response.statusText} - ${err}`);
+    }
+    await this.processSSE(response, onChunk);
+  }
+
+  protected async processSSE(response: Response, onChunk: (text: string) => void) {
+    const reader = response.body?.getReader();
+    if (!reader) return;
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+          try {
+            const data = JSON.parse(trimmed.replace(/^data: /, ''));
+            const content = data.choices?.[0]?.delta?.content;
+            if (content) onChunk(content);
+          } catch (e) { /* ignore parse error */ }
+        }
+      }
+    }
+  }
+}
+
+// --- AZURE IMPLEMENTATION ---
+class AzureProvider extends OpenAIProvider {
+  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
+    const key = config.apiKey || Env.get('VITE_AZURE_API_KEY');
+    const endpoint = config.endpoint || Env.get('VITE_AZURE_ENDPOINT');
+    const deployment = config.deployment || Env.get('VITE_AZURE_DEPLOYMENT');
+    const version = config.apiVersion || '2025-01-01-preview';
+
+    if (!key || !endpoint || !deployment) throw new Error("Azure Config incomplete. Need Key, Endpoint, and Deployment.");
+
+    const url = `${endpoint.replace(/\/$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=${version}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': key
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Azure API Error: ${response.statusText} - ${err}`);
+    }
+    await this.processSSE(response, onChunk);
+  }
+}
+
+// --- ANTHROPIC IMPLEMENTATION ---
+class AnthropicProvider implements IContentGenerator {
+  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
+    const key = config.apiKey || Env.get('VITE_ANTHROPIC_API_KEY');
+    if (!key) throw new Error("Anthropic API Key missing.");
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'dangerously-allow-browser': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-4.5-sonnet',
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }],
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+       if (err.includes('CORS') || response.status === 0) {
+         throw new Error("CORS Error: Browser blocked Anthropic API. Please use a proxy.");
+       }
+      throw new Error(`Claude API Error: ${response.statusText} - ${err}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) return;
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ')) {
+          try {
+             const data = JSON.parse(trimmed.replace(/^data: /, ''));
+             if (data.type === 'content_block_delta') {
+               onChunk(data.delta?.text || '');
+             }
+          } catch (e) { /* ignore */ }
+        }
+      }
+    }
+  }
+}
+
+// --- 4. Service Factory & Public Exports ---
+
+const getProviderImplementation = (provider: AiProvider): IContentGenerator => {
+  switch (provider) {
+    case AiProvider.GEMINI: return new GeminiProvider();
+    case AiProvider.OPENAI: 
+    case AiProvider.CODEX_CLI: return new OpenAIProvider();
+    case AiProvider.AZURE: return new AzureProvider();
+    case AiProvider.CLAUDE: return new AnthropicProvider();
+    default: throw new Error(`Provider ${provider} not supported`);
+  }
+};
+
 /**
- * MAIN GENERATION FUNCTION - ROUTES TO PROVIDER
+ * Main entry point for generating rules via the selected provider.
  */
 export const generateRulesStream = async (
   request: GenerationRequest, 
   onChunk: (text: string) => void
 ): Promise<void> => {
-  
-  const { provider, apiKey, endpoint, deployment, apiVersion } = request.aiConfig;
+  const providerImpl = getProviderImplementation(request.aiConfig.provider);
   const systemPrompt = getSystemPrompt(request.ide);
   const userPrompt = constructPrompt(request);
-
-  switch (provider) {
-    case AiProvider.GEMINI:
-      // Uses gemini-3-pro-preview (Complex Tasks)
-      await generateWithGemini(userPrompt, systemPrompt, onChunk);
-      break;
-    case AiProvider.OPENAI:
-    case AiProvider.CODEX_CLI:
-      // Uses gpt-5.1 (Bleeding Edge)
-      await generateWithOpenAI(userPrompt, systemPrompt, apiKey!, onChunk);
-      break;
-    case AiProvider.AZURE:
-      // Uses gpt-5.1 (dependent on user deployment)
-      await generateWithAzure(userPrompt, systemPrompt, apiKey!, endpoint!, deployment!, apiVersion!, onChunk);
-      break;
-    case AiProvider.CLAUDE:
-      // Uses claude-4.5-sonnet
-      await generateWithClaude(userPrompt, systemPrompt, apiKey!, onChunk);
-      break;
-    default:
-      throw new Error(`Provider ${provider} not implemented`);
-  }
+  
+  await providerImpl.generateStream(userPrompt, systemPrompt, request.aiConfig, onChunk);
 };
 
-// --- PROVIDER IMPLEMENTATIONS ---
+/**
+ * Analyze context using a cheap/fast model (Defaulting to Gemini for analysis)
+ */
+export const analyzeContext = async (context: string): Promise<AnalysisResponse> => {
+  // Defaults to using the internal Gemini key for analysis regardless of selected provider
+  // to save user tokens on other platforms.
+  const key = Env.get('VITE_GEMINI_API_KEY');
+  if (!key) throw new Error("Analysis requires VITE_GEMINI_API_KEY");
 
-const generateWithGemini = async (prompt: string, systemInstruction: string, onChunk: (text: string) => void) => {
-  if (!process.env.API_KEY) throw new Error("Gemini API Key missing");
-  
-  const responseStream = await genAI.models.generateContentStream({
-    model: 'gemini-3-pro-preview', // Using Gemini 3 Pro for maximum reasoning
+  const genAI = new GoogleGenAI({ apiKey: key });
+  const prompt = `
+    You are a Senior Architect.
+    Analyze this context: "${context}"
+    Is there enough info to generate framework-specific rules?
+    Return JSON: { "status": "READY" | "NEEDS_INFO", "questions": [], "summary": "" }
+  `;
+
+  const response = await genAI.models.generateContent({
+    model: 'gemini-2.5-flash', // Cheap model for analysis
     contents: prompt,
-    config: {
-      systemInstruction: systemInstruction,
-      temperature: 0.2,
+    config: { 
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          status: {
+            type: Type.STRING,
+            enum: ['READY', 'NEEDS_INFO'],
+          },
+          questions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
+          summary: {
+            type: Type.STRING,
+          },
+        },
+        required: ['status'],
+      },
     }
   });
 
-  for await (const chunk of responseStream) {
-    if (chunk.text) onChunk(chunk.text);
-  }
-};
-
-const generateWithOpenAI = async (prompt: string, system: string, key: string, onChunk: (text: string) => void) => {
-  if (!key) throw new Error("OpenAI API Key required");
-  
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-5.1', // Enforcing GPT-5.1 per user request
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt }
-      ],
-      stream: true
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OpenAI API Error: ${response.statusText} - ${err}`);
-  }
-  await processSSEStream(response, onChunk, 'openai');
-};
-
-const generateWithAzure = async (prompt: string, system: string, key: string, endpoint: string, deployment: string, version: string, onChunk: (text: string) => void) => {
-  if (!key || !endpoint || !deployment) throw new Error("Azure Config incomplete");
-  
-  // Format: https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions?api-version={version}
-  const url = `${endpoint.replace(/\/$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=${version || '2025-01-01-preview'}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'api-key': key
-    },
-    body: JSON.stringify({
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt }
-      ],
-      stream: true
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Azure API Error: ${response.statusText} - ${err}`);
-  }
-  await processSSEStream(response, onChunk, 'azure');
-};
-
-const generateWithClaude = async (prompt: string, system: string, key: string, onChunk: (text: string) => void) => {
-  if (!key) throw new Error("Anthropic API Key required");
-  
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'dangerously-allow-browser': 'true' 
-    },
-    body: JSON.stringify({
-      model: 'claude-4.5-sonnet', // Enforcing 4.5 Sonnet per user request
-      max_tokens: 8192,
-      system: system,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      stream: true
-    })
-  });
-
-  if (!response.ok) {
-     const errText = await response.text();
-     if (errText.includes('CORS') || response.status === 0) {
-         throw new Error("CORS Error: Browser blocked Anthropic API. Please use a CORS proxy or the 'Gemini' provider.");
-     }
-     throw new Error(`Claude API Error: ${response.statusText} - ${errText}`);
-  }
-  await processSSEStream(response, onChunk, 'claude');
-};
-
-// Helper to process Server-Sent Events from OpenAI/Azure/Claude
-const processSSEStream = async (response: Response, onChunk: (text: string) => void, provider: 'openai' | 'azure' | 'claude') => {
-  const reader = response.body?.getReader();
-  if (!reader) return;
-
-  const decoder = new TextDecoder();
-  
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
-    
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === 'data: [DONE]') continue;
-      
-      if (trimmed.startsWith('data: ') || trimmed.startsWith('event: completion')) {
-        const dataStr = trimmed.replace(/^data: /, '').trim();
-        if (!dataStr || dataStr === '[DONE]') continue;
-
-        try {
-          const data = JSON.parse(dataStr);
-          let text = '';
-          
-          if (provider === 'openai' || provider === 'azure') {
-            text = data.choices?.[0]?.delta?.content || '';
-          } else if (provider === 'claude') {
-             if (data.type === 'content_block_delta') {
-               text = data.delta?.text || '';
-             }
-          }
-          
-          if (text) onChunk(text);
-        } catch (e) {
-          // Partial JSON parse error, skip
-        }
-      }
-    }
-  }
+  if (!response.text) throw new Error("Failed to analyze context");
+  return JSON.parse(response.text) as AnalysisResponse;
 };
