@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Laptop, Cpu, Check, FileCode, Braces, Sparkles, FolderTree, MessageSquarePlus, Command, ArrowRight } from 'lucide-react';
+import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Laptop, Cpu, Check, FileCode, Braces, Sparkles, FolderTree, MessageSquarePlus, Command, ArrowRight, FileText, FileJson } from 'lucide-react';
 
 type AgentRole = 'productOwner' | 'architect' | 'developer' | 'qa' | 'security' | 'refactor' | 'devops' | 'techWriter' | 'database';
 
@@ -256,12 +256,12 @@ if (isExpired(token)) return error("Token expired");
             <h3 className="text-3xl font-bold text-white">Advanced Cognitive Architecture</h3>
             <p className="text-slate-300 leading-relaxed text-lg">
               We don't just generate text; we generate <strong>behavior protocols</strong>. 
-              By enforcing XML-structured constraints and explicit "Thinking Processes," 
+              By enforcing constraints and explicit "Thinking Processes," 
               we prevent hallucinations and ensure your AI acts like a Senior Engineer.
             </p>
             
             <div className="grid gap-4">
-               {['XML-Structured Roles', 'Mandatory Chain of Thought', 'Strict Protocol Enforcement'].map((item, i) => (
+               {['Defined Roles', 'Mandatory Chain of Thought', 'Strict Protocol Enforcement'].map((item, i) => (
                  <div key={i} className="flex items-center gap-3 text-slate-300">
                    <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
                      <Check className="w-3 h-3 text-green-400" />
@@ -271,26 +271,33 @@ if (isExpired(token)) return error("Token expired");
                ))}
             </div>
 
-            {/* Why XML? Block */}
+            {/* Strategy Comparison Block */}
             <div className="bg-blue-950/30 border border-blue-500/20 rounded-2xl p-6 mt-6 relative overflow-hidden">
                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none" />
                <h4 className="text-blue-200 font-bold flex items-center gap-2 mb-4 relative z-10">
                   <Braces className="w-5 h-5 text-blue-400" />
-                  Why XML over Markdown?
+                  Format Strategy: XML vs. Markdown vs. JSON
                </h4>
                <div className="space-y-4 text-sm text-slate-300 relative z-10">
                   <div className="flex gap-4 items-start">
-                    <div className="w-1 h-12 bg-red-500/40 rounded-full shrink-0 mt-1" />
+                    <div className="w-1 h-12 bg-green-500/40 rounded-full shrink-0 mt-1" />
                     <div>
-                       <strong className="text-slate-200 block mb-1">Markdown is "Soft"</strong>
-                       Headers and bullet points are treated as narrative suggestions. LLMs often "bleed" context, causing a QA agent to accidentally write implementation code.
+                       <strong className="text-green-300 block mb-1">Use Strict XML (Agents / Claude)</strong>
+                       <p className="text-xs text-slate-400">Best for complex, multi-role agent systems. Tags like <code className="text-green-400">&lt;role&gt;</code> create hard cognitive boundaries, preventing "role bleeding".</p>
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
-                     <div className="w-1 h-12 bg-green-500/50 rounded-full shrink-0 mt-1" />
+                     <div className="w-1 h-12 bg-blue-500/50 rounded-full shrink-0 mt-1" />
                      <div>
-                        <strong className="text-slate-200 block mb-1">XML is "Strict"</strong>
-                        Tags like <code className="text-green-400 bg-green-900/30 px-1 py-0.5 rounded border border-green-500/20">&lt;role&gt;</code> create hard cognitive boundaries. The model treats content inside tags as isolated scopes, ensuring 100% role adherence and zero instruction leakage.
+                        <strong className="text-blue-300 block mb-1">Use Markdown (Copilot / GPT)</strong>
+                        <p className="text-xs text-slate-400">Best for general assistants and Cursor. It's more token-efficient and readable for humans, but boundaries are "softer".</p>
+                     </div>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                     <div className="w-1 h-12 bg-yellow-500/50 rounded-full shrink-0 mt-1" />
+                     <div>
+                        <strong className="text-yellow-300 block mb-1">Use JSON (API / Automation)</strong>
+                        <p className="text-xs text-slate-400">Best for programmatic ingestion or strict schema enforcement. Useful when rules need to be parsed by other tools.</p>
                      </div>
                   </div>
                </div>
@@ -305,16 +312,45 @@ if (isExpired(token)) return error("Token expired");
                <div className="w-2.5 h-2.5 rounded-full bg-slate-600" />
                <div className="w-2.5 h-2.5 rounded-full bg-slate-600" />
              </div>
-             <div className="space-y-1">
-                <div className="text-purple-400">&lt;role name="@Architect"&gt;</div>
-                <div className="pl-4 text-blue-400">&lt;trigger&gt;<span className="text-slate-300">folder_structure</span>&lt;/trigger&gt;</div>
-                <div className="pl-4 text-yellow-400">&lt;workflow&gt;</div>
-                <div className="pl-8 text-slate-300">1. Analyze root directory</div>
-                <div className="pl-8 text-slate-300">2. <span className="text-green-400">&lt;thinking&gt;</span>Identify patterns<span className="text-green-400">&lt;/thinking&gt;</span></div>
-                <div className="pl-8 text-slate-300">3. Propose modular structure</div>
-                <div className="pl-4 text-yellow-400">&lt;/workflow&gt;</div>
-                <div className="text-purple-400">&lt;/role&gt;</div>
+             
+             {/* XML PREVIEW */}
+             <div className="mb-6">
+                <div className="text-[10px] text-green-500 font-bold mb-1 opacity-70">OPTION A: STRICT XML</div>
+                <div className="space-y-1 pl-2 border-l border-green-500/20">
+                    <div className="text-purple-400">&lt;role name="@Architect"&gt;</div>
+                    <div className="pl-4 text-blue-400">&lt;trigger&gt;<span className="text-slate-300">folder_structure</span>&lt;/trigger&gt;</div>
+                    <div className="pl-4 text-yellow-400">&lt;workflow&gt;</div>
+                    <div className="pl-8 text-slate-300">1. Analyze root...</div>
+                    <div className="pl-4 text-yellow-400">&lt;/workflow&gt;</div>
+                    <div className="text-purple-400">&lt;/role&gt;</div>
+                </div>
              </div>
+
+             {/* MD PREVIEW */}
+             <div className="mb-6">
+                <div className="text-[10px] text-blue-500 font-bold mb-1 opacity-70">OPTION B: CLEAN MARKDOWN</div>
+                <div className="space-y-1 pl-2 border-l border-blue-500/20">
+                    <div className="text-blue-300 font-bold">## Role: @Architect</div>
+                    <div className="text-slate-400 italic">Trigger: folder_structure</div>
+                    <div className="text-slate-300 font-bold mt-1">Workflow:</div>
+                    <div className="pl-2 text-slate-400">- 1. Analyze root...</div>
+                </div>
+             </div>
+
+             {/* JSON PREVIEW */}
+             <div>
+                <div className="text-[10px] text-yellow-500 font-bold mb-1 opacity-70">OPTION C: STRICT JSON</div>
+                <div className="space-y-1 pl-2 border-l border-yellow-500/20">
+                    <div className="text-yellow-300">{`{`}</div>
+                    <div className="pl-4 text-blue-300">"role": "Architect",</div>
+                    <div className="pl-4 text-blue-300">"trigger": "folder_structure",</div>
+                    <div className="pl-4 text-blue-300">"workflow": [</div>
+                    <div className="pl-8 text-slate-300">"Analyze root..."</div>
+                    <div className="pl-4 text-blue-300">]</div>
+                    <div className="text-yellow-300">{`}`}</div>
+                </div>
+             </div>
+
           </div>
         </div>
       </div>

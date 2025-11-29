@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IdeType, TemplateType, AnalysisResponse, GeneratedFile, AiProvider, AiConfiguration } from '../types';
+import { IdeType, TemplateType, AnalysisResponse, GeneratedFile, AiProvider, AiConfiguration, OutputStyle } from '../types';
 import { generateRulesStream, analyzeContext } from '../services/geminiService';
-import { Copy, Check, Wand2, Loader2, AlertCircle, MessageSquare, ArrowRight, Code, FileCode, Sparkles, Cpu, Terminal, FileText, Cloud, Database, Server, Globe, Layers, Box, Settings2 } from 'lucide-react';
+import { Copy, Check, Wand2, Loader2, AlertCircle, MessageSquare, ArrowRight, Code, FileCode, Sparkles, Cpu, Terminal, FileText, Cloud, Database, Server, Globe, Layers, Box, Settings2, FileType } from 'lucide-react';
 
 const Generator: React.FC = () => {
   // State Machine
   const [step, setStep] = useState<'input' | 'analyzing' | 'questions' | 'generating' | 'done'>('input');
   
   const [ide, setIde] = useState<IdeType>(IdeType.UNIVERSAL);
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>(OutputStyle.XML); // Default to XML
   const [context, setContext] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -193,7 +194,8 @@ const Generator: React.FC = () => {
         template: TemplateType.DETECT_AUTO,
         context,
         answers,
-        aiConfig
+        aiConfig,
+        style: outputStyle
       }, (chunk) => {
         accumulated += chunk;
         setRawOutput(accumulated);
@@ -341,20 +343,40 @@ const Generator: React.FC = () => {
                    )}
                 </div>
 
-                <div className="mb-6">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Target Platform</label>
-                  <div className="relative">
-                    <select 
-                      value={ide}
-                      onChange={(e) => setIde(e.target.value as IdeType)}
-                      className="w-full appearance-none bg-slate-900/50 border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
-                    >
-                      {Object.values(IdeType).map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-3.5 pointer-events-none text-slate-400">
-                      <Terminal className="w-4 h-4" />
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Target Platform</label>
+                    <div className="relative">
+                      <select 
+                        value={ide}
+                        onChange={(e) => setIde(e.target.value as IdeType)}
+                        className="w-full appearance-none bg-slate-900/50 border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                      >
+                        {Object.values(IdeType).map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-3.5 pointer-events-none text-slate-400">
+                        <Terminal className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Output Format</label>
+                    <div className="relative">
+                      <select 
+                        value={outputStyle}
+                        onChange={(e) => setOutputStyle(e.target.value as OutputStyle)}
+                        className="w-full appearance-none bg-slate-900/50 border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-medium"
+                      >
+                        {Object.values(OutputStyle).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-3.5 pointer-events-none text-slate-400">
+                        <FileType className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { GenerationRequest, IdeType, AnalysisResponse, AiProvider, AiConfiguration } from "../types";
+import { GenerationRequest, IdeType, AnalysisResponse, AiProvider, AiConfiguration, OutputStyle } from "../types";
 
 // --- 1. Environment Abstraction (Vite + Node/Sandpack support) ---
 const Env = {
@@ -44,52 +44,68 @@ const getSystemPrompt = (ide: IdeType): string => {
 };
 
 const constructPrompt = (request: GenerationRequest): string => {
+  const style = request.style;
+  const isXML = style === OutputStyle.XML;
+  const isJSON = style === OutputStyle.JSON;
+
+  let styleLabel = "STANDARD MARKDOWN (OpenAI Style)";
+  if (isXML) styleLabel = "STRICT XML (Anthropic Style)";
+  if (isJSON) styleLabel = "STRICT JSON (Programmatic Style)";
+
   let prompt = `
     Generate configuration for: ${request.ide}
     Context/Stack: ${request.context}
+    Output Style: ${styleLabel}
   `;
 
   if (request.answers) {
     prompt += `\nUser Clarifications:\n${Object.entries(request.answers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n')}`;
   }
   
+  // Helper to choose format instruction
+  let formatInstruction = `Use standard Markdown headers (##), bold text, and bullet points. Focus on readability and token efficiency. Do not use XML tags.`;
+  
+  if (isXML) {
+    formatInstruction = `DO NOT use simple bullet points. Use XML-style tagging for high informational density (e.g., <role>, <workflow>, <constraints>). This is critical for preventing role bleeding.`;
+  } else if (isJSON) {
+    formatInstruction = `Output MUST be valid JSON. Use a structured schema with keys like "roles", "rules", "workflow", "constraints". Ensure strictly valid JSON syntax without markdown formatting around it if possible.`;
+  }
+
   // Inject Universal/Specific Prompt Instructions
   if (request.ide === IdeType.UNIVERSAL) {
     prompt += `
       \nPlease generate the following 5 files. Use the delimiters strictly.
 
       1. .cursorrules (For Cursor/VS Code)
+         - Style: ${isXML ? 'XML tags for rules (<rule>)' : isJSON ? 'JSON Array of Rules' : 'Markdown lists'}
          - Focus on: Syntax rules, naming conventions, strict file structure enforcement.
          - Include "Project triggers" (e.g., "When editing .tsx, ensure accessibility").
-         - Target Model: Claude 4.5 Sonnet.
 
       2. agents.md (For Autonomous Agents / Windsurf / Cursor Agent)
-         - STYLE: "Advanced Cognitive Architecture" Configuration.
-         - DO NOT use simple bullet points. Use XML-style tagging for high informational density (e.g., <role>, <workflow>, <constraints>).
+         - Style: ${formatInstruction}
          - STRUCTURE:
-           - <global_constraints>: NO hallucinations, strict TDD, "Chain of Thought" mandatory before code.
-           - <mcp_tools>: Explicitly define usage of 'postgres-mcp', 'filesystem-mcp' etc. if relevant.
-           - <roles>: Define the following with deep <profile>, <triggers>, and <interaction_protocol>:
-             - @ProductOwner (Gherkin stories)
-             - @Architect (Pattern enforcement, Folder structure)
-             - @Developer (Implementation, TDD)
-             - @QA (Test generation)
-             - @Security (OWASP audits)
-             - @Refactor (Context-aware cleanup)
-             - @DevOps (CI/CD, Docker)
-             - @TechWriter (Docs)
-             - @Database (MCP Specialist)
-         - MANDATORY: Enforce a <thinking_process> block before any code output to ensure quality.
+           - Global Constraints: NO hallucinations, strict TDD, "Chain of Thought" mandatory before code.
+           - MCP Tools: Explicitly define usage of 'postgres-mcp', 'filesystem-mcp' etc. if relevant.
+           - Roles: Define the following with deep profiles and interaction protocols:
+             - ProductOwner (Gherkin stories)
+             - Architect (Pattern enforcement, Folder structure)
+             - Developer (Implementation, TDD)
+             - QA (Test generation)
+             - Security (OWASP audits)
+             - Refactor (Context-aware cleanup)
+             - DevOps (CI/CD, Docker)
+             - TechWriter (Docs)
+             - Database (MCP Specialist)
 
       3. .github/copilot-instructions.md (For GitHub Copilot)
+         - Style: ${isJSON ? 'JSON' : 'Markdown'} (Copilot can parse JSON instructions if explicitly structured).
          - Focus on: Chat tone (terse/verbose), specific framework nuances not covered by linting.
-         - Target: GPT-5.1 class models.
 
       4. claude-project-instructions.md (For Claude Projects)
+         - Style: ${isXML ? 'XML (Claude Native)' : isJSON ? 'JSON' : 'Markdown'}
          - Focus on: "Project Knowledge" and "Custom Instructions".
          - Instruct Claude to use Artifacts for major UI components or complex logic.
          - Define the "Persona" as a Staff Engineer who prefers composition over inheritance and functional patterns.
-         - Include a high-level architectural summary of the stack.
 
       5. codex_system_prompt.txt (For OpenAI Codex / generic LLM Context)
          - A concise System Prompt summarizing the stack, coding style, and constraints for use with raw LLM calls (CLI/Scripts).
@@ -101,9 +117,9 @@ const constructPrompt = (request: GenerationRequest): string => {
       prompt += `
       \nGenerate an agents.md file for Autonomous AI Agents.
       The prompt should:
-      - Use XML-structured "Advanced Cognitive Architecture".
+      - Use ${isXML ? 'XML-structured "Advanced Cognitive Architecture"' : isJSON ? 'Strict JSON Schema' : 'Clean Markdown Structure'}.
       - Define specific roles (@Architect, @QA, etc.).
-      - Enforce <thinking> blocks.
+      - Enforce Thinking blocks.
       - Define MCP (Model Context Protocol) tool usage.
       Delimiter: --- START OF FILE: agents.md ---
       `;

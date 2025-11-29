@@ -27,6 +27,12 @@ export enum AiProvider {
   CODEX_CLI = 'Codex CLI (Bleeding Edge)'
 }
 
+export enum OutputStyle {
+  XML = 'Strict XML (Best for Agents/Claude)',
+  MARKDOWN = 'Standard Markdown (Best for Copilot/GPT)',
+  JSON = 'Strict JSON (Best for API/Schema)'
+}
+
 export interface AiConfiguration {
   provider: AiProvider;
   apiKey?: string;
@@ -41,6 +47,7 @@ export interface GenerationRequest {
   context: string; 
   answers?: Record<string, string>;
   aiConfig: AiConfiguration;
+  style: OutputStyle;
 }
 
 export interface AnalysisResponse {
