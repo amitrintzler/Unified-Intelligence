@@ -29,9 +29,9 @@ const getSystemPrompt = (ide: IdeType): string => {
     case IdeType.UNIVERSAL:
       return `${base} You specialize in setting up a "Unified AI Context" for multiple LLM platforms simultaneously (Cursor, Copilot, Claude, OpenAI).`;
     case IdeType.CODEX:
-      return `${base} You specialize in OpenAI Codex and GPT-5 system prompts, focusing on strict token efficiency and code correctness.`;
+      return `${base} You specialize in OpenAI Codex "Instruction Skills." You create high-density system prompts that act as persistent skill-sets for OpenAI models.`;
     case IdeType.CLAUDE:
-      return `${base} You specialize in creating reusable, high-quality "Skills" for Anthropic Claude. You focus on creating structured knowledge, clear instructions, and robust examples, preferably using XML for maximum clarity.`;
+      return `${base} You specialize in creating official "Anthropic Skills." You use the strict XML standard (<anthropic_skill>) to define personas, rules, and logic for Claude.`;
     case IdeType.CURSOR:
       return `${base} You specialize in Cursor IDE (.cursorrules), optimizing for hybrid model usage (Claude 4.5 + GPT-5.1).`;
     case IdeType.COPILOT:
@@ -77,37 +77,23 @@ const constructPrompt = (request: GenerationRequest): string => {
       \nPlease generate the following 5 files. Use the delimiters strictly.
 
       1. .cursorrules (For Cursor/VS Code)
-         - Style: ${isXML ? 'XML tags for rules (<rule>)' : isJSON ? 'JSON Array of Rules' : 'Markdown lists'}
          - Focus on: Syntax rules, naming conventions, strict file structure enforcement.
-         - Include "Project triggers" (e.g., "When editing .tsx, ensure accessibility").
 
-      2. agents.md (For Autonomous Agents / Windsurf / Cursor Agent)
-         - Style: ${formatInstruction}
+      2. agents.md (For Autonomous Agents)
          - STRUCTURE:
-           - Global Constraints: NO hallucinations, strict TDD, "Chain of Thought" mandatory before code.
-           - MCP Tools: Explicitly define usage of 'postgres-mcp', 'filesystem-mcp' etc. if relevant.
-           - Roles: Define the following with deep profiles and interaction protocols:
-             - ProductOwner (Gherkin stories)
-             - Architect (Pattern enforcement, Folder structure)
-             - Developer (Implementation, TDD)
-             - QA (Test generation)
-             - Security (OWASP audits)
-             - Refactor (Context-aware cleanup)
-             - DevOps (CI/CD, Docker)
-             - TechWriter (Docs)
-             - Database (MCP Specialist)
+           - Global Constraints, MCP Tools, and Multi-Agent Roles (@Architect, @Developer, etc.).
 
       3. .github/copilot-instructions.md (For GitHub Copilot)
-         - Style: ${isJSON ? 'JSON' : 'Markdown'} (Copilot can parse JSON instructions if explicitly structured).
-         - Focus on: Chat tone (terse/verbose), specific framework nuances not covered by linting.
+         - Focus on: Chat tone and framework nuances.
 
-      4. claude_skill_instructions.xml (For creating a new Claude Skill)
-         - Style: Generate structured XML regardless of the user's main style selection, as it's best for Claude Skills.
-         - Structure: Use a root <skill> tag with a 'name' attribute. Inside, include <description>, <instructions> with nested <rule> tags, and <examples> with <code> blocks.
-         - Focus on: Creating a reusable, tool-like set of instructions that Claude can refer to across multiple conversations. Define a clear persona and coding patterns.
+      4. claude_skill.xml (Anthropic Skill Standard)
+         - Use root: <anthropic_skill>.
+         - Include: <name>, <description>, <instruction_set>, <constraints>, <examples>.
+         - This is the official standard for defining Claude Skills.
 
-      5. codex_system_prompt.txt (For OpenAI Codex / generic LLM Context)
-         - A concise System Prompt summarizing the stack, coding style, and constraints for use with raw LLM calls (CLI/Scripts).
+      5. codex_skill.md (OpenAI Instruction Skill)
+         - Focus on: High-performance System Prompting for GPT-5.1.
+         - Structure: Role Definition, Core Capabilities, Procedural Rules, Knowledge Reference.
 
       IMPORTANT: Separate each file with this exact delimiter line:
       --- START OF FILE: [filename] ---
@@ -115,20 +101,31 @@ const constructPrompt = (request: GenerationRequest): string => {
   } else if (request.ide === IdeType.AGENTS) {
       prompt += `
       \nGenerate an agents.md file for Autonomous AI Agents.
-      The prompt should:
-      - Use ${isXML ? 'XML-structured "Advanced Cognitive Architecture"' : isJSON ? 'Strict JSON Schema' : 'Clean Markdown Structure'}.
-      - Define specific roles (@Architect, @QA, etc.).
-      - Enforce Thinking blocks.
-      - Define MCP (Model Context Protocol) tool usage.
       Delimiter: --- START OF FILE: agents.md ---
       `;
   } else if (request.ide === IdeType.CLAUDE) {
       prompt += `
-      \nGenerate instructions for a new Claude Skill.
-      - Style: Generate structured XML as it is the most effective format for Claude Skills.
-      - Structure: Use a root <skill name="..."> tag. Inside, include <description>, <instructions> with nested <rule> tags, and <examples> with <code> blocks.
-      - Focus: Create a self-contained, reusable skill that defines a specific persona, coding patterns, and project constraints.
-      Delimiter: --- START OF FILE: claude_skill_instructions.xml ---
+      \nGenerate a "Claude Skill" definition using the official Anthropic XML standard.
+      - Root Tag: <anthropic_skill>
+      - Required Structure:
+        <name>: Short, punchy name.
+        <description>: What this skill allows Claude to do.
+        <instruction_set>: Detailed procedural steps.
+        <constraints>: What NOT to do.
+        <examples>: 1-2 code examples.
+      Delimiter: --- START OF FILE: claude_skill.xml ---
+      `;
+  } else if (request.ide === IdeType.CODEX) {
+      prompt += `
+      \nGenerate an "OpenAI Codex Skill" (System Instructions).
+      - Focus on persistent behavior and specialized knowledge.
+      - Structure:
+        ## Skill: [Name]
+        ### Role Definition
+        ### Core Capabilities
+        ### Interaction Protocols
+        ### Implementation Rules
+      Delimiter: --- START OF FILE: codex_skill.md ---
       `;
   } else {
       prompt += `\nGenerate the specific configuration file for ${request.ide}. Ensure strict syntax and best practices.\nDelimiter: --- START OF FILE: output ---`;

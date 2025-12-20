@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Cpu, Check, FileCode, Braces, Sparkles, FolderTree, MessageSquarePlus, Command, ArrowRight, FileText, FileJson, Copy, PenTool, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { BrainCircuit, Layers, LayoutTemplate, Bug, GitPullRequest, Shield, UserCircle, Code2, Terminal, BookOpen, Database, Zap, Cpu, Check, FileCode, Braces, Sparkles, FolderTree, MessageSquarePlus, Command, ArrowRight, FileText, FileJson, Copy, PenTool, ThumbsUp, ThumbsDown, Laptop } from 'lucide-react';
 
 // --- Types ---
 type AgentRole = 'productOwner' | 'architect' | 'developer' | 'qa' | 'security' | 'refactor' | 'devops' | 'techWriter' | 'database';
@@ -200,13 +200,13 @@ const CodeBlock: React.FC<{ content: string }> = ({ content }) => {
 const GuideHeader: React.FC = () => (
   <div className="text-center pt-24 pb-16">
     <div className="inline-block bg-primary/10 text-primary font-bold text-sm px-4 py-2 rounded-full mb-4">
-      The Next-Generation AI Workflow
+      Official "AI Skill" Standards
     </div>
     <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tighter mb-6">
-      From <span className="text-slate-400">Suggestions</span> to <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Cognitive Architecture</span>
+      From <span className="text-slate-400">Prompts</span> to <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Instruction Skills</span>
     </h1>
     <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-relaxed">
-      UniGen elevates your AI from a simple code completer to a structured, multi-agent team that understands your project's architecture, roles, and workflows. Stop repeating yourself and start building with a true AI partner.
+      UniGen now supports the official **Anthropic Skill Standard** and persistent **OpenAI Codex Skills**. Transform temporary context into permanent, reusable AI capabilities.
     </p>
   </div>
 );
@@ -319,44 +319,78 @@ const FormatStrategyTab: React.FC = () => (
         <div className="bg-surface/20 border border-white/10 p-6 rounded-2xl">
             <FileCode className="w-8 h-8 text-purple-400 mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">Strict XML</h3>
-            <p className="text-sm text-slate-400 mb-4">Best for Anthropic Claude and complex agent systems. XML tags create "hard boundaries" that prevent the AI from confusing instructions, roles, and constraints. Maximizes reliability.</p>
+            <p className="text-sm text-slate-400 mb-4">Best for Anthropic Claude. XML tags like `<anthropic_skill>` create hard logical boundaries that prevent instruction drift.</p>
         </div>
         <div className="bg-surface/20 border border-white/10 p-6 rounded-2xl">
             <FileText className="w-8 h-8 text-blue-400 mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Standard Markdown</h3>
-            <p className="text-sm text-slate-400 mb-4">Best for OpenAI models (GPT), GitHub Copilot, and Cursor. It is "token efficient" (cheaper), highly readable for humans, and generally well-supported. Great for general-purpose use.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Instruction Markdown</h3>
+            <p className="text-sm text-slate-400 mb-4">Best for OpenAI Codex. High-density headers and procedural lists allow OpenAI models to maintain long-term state.</p>
         </div>
         <div className="bg-surface/20 border border-white/10 p-6 rounded-2xl">
             <FileJson className="w-8 h-8 text-green-400 mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">Strict JSON</h3>
-            <p className="text-sm text-slate-400 mb-4">Best for programmatic use and API integration. Ensures a structured, predictable output that can be reliably parsed by other tools. Ideal when enforcing a specific data schema.</p>
+            <p className="text-sm text-slate-400 mb-4">Best for programmatic rules that are shared between different AI Agents and CLI tools.</p>
         </div>
     </div>
 );
 
-const ClaudeSkillsTab: React.FC = () => (
-  <div className="py-12 bg-surface/30 border border-white/10 rounded-3xl p-8 md:p-12">
-      <div className="text-center max-w-2xl mx-auto">
-          <PenTool className="w-10 h-10 text-accent mx-auto mb-4" />
-          <h2 className="text-3xl font-bold text-white mb-4">Workflow: Creating a Claude Skill</h2>
-          <p className="text-slate-400 mb-8">UniGen generates a perfect `claude_skill_instructions.xml` file. Use it to give Claude persistent, reusable knowledge about your project.</p>
-      </div>
-      <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1 space-y-4">
-              <h4 className="font-bold text-white">Step 1: Generate</h4>
-              <p className="text-sm text-slate-400">In the UniGen Generator, select "Claude" as the target and generate the `claude_skill_instructions.xml` file.</p>
-          </div>
-          <ArrowRight className="w-8 h-8 text-primary shrink-0 rotate-90 md:rotate-0" />
-          <div className="flex-1 space-y-4">
-              <h4 className="font-bold text-white">Step 2: Create Skill</h4>
-              <p className="text-sm text-slate-400">On claude.ai, click your profile, go to "Skills", and click "Create a Skill".</p>
-          </div>
-          <ArrowRight className="w-8 h-8 text-primary shrink-0 rotate-90 md:rotate-0" />
-          <div className="flex-1 space-y-4">
-              <h4 className="font-bold text-white">Step 3: Paste & Save</h4>
-              <p className="text-sm text-slate-400">Give your skill a name and paste the entire content of the generated XML file into the instructions box. Save it and you're done!</p>
-          </div>
-      </div>
+const AI_SkillsTab: React.FC = () => (
+  <div className="py-12 space-y-12">
+    <div className="bg-surface/30 border border-white/10 rounded-3xl p-8 md:p-12">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+            <Zap className="w-10 h-10 text-accent mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-4">Anthropic Skill Standard</h2>
+            <p className="text-slate-400">Claude's official "Skills" feature requires structured XML. UniGen produces a compliant `<anthropic_skill>` block that ensures Claude never breaks persona.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                <div className="font-mono text-accent text-xs mb-2">&lt;anthropic_skill&gt;</div>
+                <h4 className="font-bold text-white mb-2">Root Container</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">Wraps the entire instruction set to prevent the AI from confusing instructions with conversation history.</p>
+            </div>
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                <div className="font-mono text-accent text-xs mb-2">&lt;instruction_set&gt;</div>
+                <h4 className="font-bold text-white mb-2">Procedural Logic</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">Contains step-by-step workflows for how Claude should handle your specific code or architecture.</p>
+            </div>
+            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                <div className="font-mono text-accent text-xs mb-2">&lt;constraints&gt;</div>
+                <h4 className="font-bold text-white mb-2">Guardrails</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">Explicitly defines forbidden patterns (e.g., "NEVER use external libraries unless specified").</p>
+            </div>
+        </div>
+    </div>
+
+    <div className="bg-surface/30 border border-white/10 rounded-3xl p-8 md:p-12">
+        <div className="flex flex-col md:flex-row gap-12 items-center">
+            <div className="flex-1">
+                <Laptop className="w-12 h-12 text-primary mb-6" />
+                <h2 className="text-3xl font-bold text-white mb-4">Codex Instruction Skills</h2>
+                <p className="text-slate-400 leading-relaxed">
+                    OpenAI models (including Codex and GPT-5.1) now support highly complex "Instruction Skills." 
+                    UniGen generates a persistent Markdown-based skill-set (`codex_skill.md`) that acts as a cognitive 
+                    framework for the AI, allowing it to act as a senior lead on your specific stack.
+                </p>
+                <div className="mt-8 flex gap-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                        <Check className="w-4 h-4 text-green-400" /> Persistent Role
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                        <Check className="w-4 h-4 text-green-400" /> Stack Specifics
+                    </div>
+                </div>
+            </div>
+            <div className="w-full md:w-1/3 bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-[10px] text-blue-300 leading-tight">
+                ## Codex Skill: React Architect<br/>
+                ### Role Definition<br/>
+                You are a senior Lead Developer specialized in high-performance React systems...<br/><br/>
+                ### Implementation Rules<br/>
+                1. Always use functional components.<br/>
+                2. Memoize all expensive calculations...<br/>
+                3. Use strict atomic folder structure...
+            </div>
+        </div>
+    </div>
   </div>
 );
 
@@ -368,7 +402,7 @@ const GuideSection: React.FC = () => {
         { id: 'why', label: 'Why UniGen?', icon: Sparkles },
         { id: 'roles', label: 'Agent Roles', icon: UserCircle },
         { id: 'formats', label: 'Format Strategy', icon: Layers },
-        { id: 'skills', label: 'Claude Skills', icon: PenTool }
+        { id: 'skills', label: 'AI Skills (New)', icon: PenTool }
     ];
 
     const renderContent = () => {
@@ -376,7 +410,7 @@ const GuideSection: React.FC = () => {
             case 'why': return <WhyUniGenTab />;
             case 'roles': return <AgentRolesTab />;
             case 'formats': return <FormatStrategyTab />;
-            case 'skills': return <ClaudeSkillsTab />;
+            case 'skills': return <AI_SkillsTab />;
             default: return null;
         }
     };
