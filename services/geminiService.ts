@@ -1,383 +1,148 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationRequest, IdeType, AnalysisResponse, AiProvider, AiConfiguration, OutputStyle } from "../types";
 
-// --- 1. Environment Abstraction (Vite + Node/Sandpack support) ---
-const Env = {
-  get: (key: string): string | undefined => {
-    // Check Vite standard env vars (import.meta.env) if available
-    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
-      return (import.meta as any).env[key];
-    }
-    // Fallback to process.env (Node/Sandpack)
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
-    }
-    // Specific mapping for the default internal key often used in this env
-    if (key === 'VITE_GEMINI_API_KEY' && typeof process !== 'undefined' && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-    return undefined;
-  }
-};
-
-// --- 2. Prompt Engineering Helpers ---
+// The Google Gemini API key must be obtained exclusively from process.env.API_KEY
+const getGeminiKey = () => process.env.API_KEY;
 
 const getSystemPrompt = (ide: IdeType): string => {
-  const base = "You are an expert AI Tooling Specialist.";
+  const base = "You are an expert AI Cognitive Architect specialized in technical context orchestration.";
   
   switch (ide) {
     case IdeType.UNIVERSAL:
-      return `${base} You specialize in setting up a "Unified AI Context" for multiple LLM platforms simultaneously (Cursor, Copilot, Claude, OpenAI).`;
-    case IdeType.CODEX:
-      return `${base} You specialize in OpenAI Codex "Instruction Skills." You create high-density system prompts that act as persistent skill-sets for OpenAI models.`;
+      return `${base} You specialize in creating a "Unified AI Context" for multiple LLM platforms. Ensure each output file follows its platform's strict standards.`;
     case IdeType.CLAUDE:
-      return `${base} You specialize in creating official "Anthropic Skills." You use the strict XML standard (<anthropic_skill>) to define personas, rules, and logic for Claude.`;
-    case IdeType.CURSOR:
-      return `${base} You specialize in Cursor IDE (.cursorrules), optimizing for hybrid model usage (Claude 4.5 + GPT-5.1).`;
-    case IdeType.COPILOT:
-      return `${base} You specialize in GitHub Copilot (.github/copilot-instructions.md), focusing on concise, inline suggestions and chat persona.`;
-    case IdeType.AGENTS:
-      return `${base} You specialize in Autonomous AI Agent architecture (agents.md), using XML protocols and chain-of-thought enforcement.`;
+      return `${base} You specialize in creating official "Anthropic Skills." You MUST use the strict XML root tag <anthropic_skill> as defined in Anthropic's documentation for persistent capabilities.`;
+    case IdeType.CODEX:
+      return `${base} You specialize in OpenAI Codex "Instruction Skills." Create high-density system prompts that act as persistent skill-sets for OpenAI's Codex and GPT models.`;
     default:
-      return `${base} You generate specific configuration files for AI coding tools.`;
+      return `${base} You generate expert-level configuration files for AI coding tools.`;
   }
 };
 
 const constructPrompt = (request: GenerationRequest): string => {
   const style = request.style;
-  const isXML = style === OutputStyle.XML;
-  const isJSON = style === OutputStyle.JSON;
-
-  let styleLabel = "STANDARD MARKDOWN (OpenAI Style)";
-  if (isXML) styleLabel = "STRICT XML (Anthropic Style)";
-  if (isJSON) styleLabel = "STRICT JSON (Programmatic Style)";
-
+  
   let prompt = `
-    Generate configuration for: ${request.ide}
-    Context/Stack: ${request.context}
-    Output Style: ${styleLabel}
+    TASK: Generate highly specialized configuration files for ${request.ide}.
+    CONTEXT: ${request.context}
+    OUTPUT STYLE: ${style}
   `;
 
   if (request.answers) {
-    prompt += `\nUser Clarifications:\n${Object.entries(request.answers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n')}`;
-  }
-  
-  // Helper to choose format instruction
-  let formatInstruction = `Use standard Markdown headers (##), bold text, and bullet points. Focus on readability and token efficiency. Do not use XML tags.`;
-  
-  if (isXML) {
-    formatInstruction = `DO NOT use simple bullet points. Use XML-style tagging for high informational density (e.g., <role>, <workflow>, <constraints>). This is critical for preventing role bleeding.`;
-  } else if (isJSON) {
-    formatInstruction = `Output MUST be valid JSON. Use a structured schema with keys like "roles", "rules", "workflow", "constraints". Ensure strictly valid JSON syntax without markdown formatting around it if possible.`;
+    prompt += `\nUSER CLARIFICATIONS:\n${Object.entries(request.answers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n')}`;
   }
 
-  // Inject Universal/Specific Prompt Instructions
   if (request.ide === IdeType.UNIVERSAL) {
     prompt += `
-      \nPlease generate the following 5 files. Use the delimiters strictly.
+      Generate exactly 5 files. Use the delimiters strictly.
 
-      1. .cursorrules (For Cursor/VS Code)
-         - Focus on: Syntax rules, naming conventions, strict file structure enforcement.
+      1. .cursorrules (For Cursor) - High-density rules for file structure and syntax.
+      2. agents.md (For Autonomous Agents) - Multi-agent role definitions (@Architect, @Developer).
+      3. .github/copilot-instructions.md (For GitHub Copilot) - Markdown instructions for chat behavior.
+      4. claude_skill.xml (Anthropic Skill Standard) - Compliant <anthropic_skill> XML block.
+      5. codex_skill.md (OpenAI Codex Skill) - Procedural rules for GPT-series persistent behavior.
 
-      2. agents.md (For Autonomous Agents)
-         - STRUCTURE:
-           - Global Constraints, MCP Tools, and Multi-Agent Roles (@Architect, @Developer, etc.).
-
-      3. .github/copilot-instructions.md (For GitHub Copilot)
-         - Focus on: Chat tone and framework nuances.
-
-      4. claude_skill.xml (Anthropic Skill Standard)
-         - Use root: <anthropic_skill>.
-         - Include: <name>, <description>, <instruction_set>, <constraints>, <examples>.
-         - This is the official standard for defining Claude Skills.
-
-      5. codex_skill.md (OpenAI Instruction Skill)
-         - Focus on: High-performance System Prompting for GPT-5.1.
-         - Structure: Role Definition, Core Capabilities, Procedural Rules, Knowledge Reference.
-
-      IMPORTANT: Separate each file with this exact delimiter line:
-      --- START OF FILE: [filename] ---
+      Use delimiter: --- START OF FILE: [filename] ---
     `;
-  } else if (request.ide === IdeType.AGENTS) {
-      prompt += `
-      \nGenerate an agents.md file for Autonomous AI Agents.
-      Delimiter: --- START OF FILE: agents.md ---
-      `;
   } else if (request.ide === IdeType.CLAUDE) {
-      prompt += `
-      \nGenerate a "Claude Skill" definition using the official Anthropic XML standard.
-      - Root Tag: <anthropic_skill>
-      - Required Structure:
-        <name>: Short, punchy name.
-        <description>: What this skill allows Claude to do.
-        <instruction_set>: Detailed procedural steps.
-        <constraints>: What NOT to do.
-        <examples>: 1-2 code examples.
+    prompt += `
+      Generate a "Claude Skill" using the official Anthropic standard.
+      MANDATORY XML STRUCTURE:
+      <anthropic_skill>
+        <name>[Skill Name]</name>
+        <description>[What this skill does]</description>
+        <instruction_set>
+          <instruction>[Procedural Step 1]</instruction>
+          <instruction>[Procedural Step 2]</instruction>
+        </instruction_set>
+        <examples>
+          <example>
+            <input>[Sample Query]</input>
+            <output>[Sample Code]</output>
+          </example>
+        </examples>
+        <constraints>
+          <constraint>[Forbidden behavior]</constraint>
+        </constraints>
+      </anthropic_skill>
       Delimiter: --- START OF FILE: claude_skill.xml ---
-      `;
+    `;
   } else if (request.ide === IdeType.CODEX) {
-      prompt += `
-      \nGenerate an "OpenAI Codex Skill" (System Instructions).
-      - Focus on persistent behavior and specialized knowledge.
-      - Structure:
-        ## Skill: [Name]
-        ### Role Definition
-        ### Core Capabilities
-        ### Interaction Protocols
-        ### Implementation Rules
+    prompt += `
+      Generate an "OpenAI Codex Skill" (Instruction Set).
+      Focus on high-performance procedural rules for GPT models to act as a permanent specialist.
+      Structure:
+      ## Skill: [Name]
+      ### Role Definition
+      ### Core Capabilities
+      ### Procedural Constraints
+      ### Knowledge Architecture
       Delimiter: --- START OF FILE: codex_skill.md ---
-      `;
+    `;
   } else {
-      prompt += `\nGenerate the specific configuration file for ${request.ide}. Ensure strict syntax and best practices.\nDelimiter: --- START OF FILE: output ---`;
+    prompt += `\nGenerate the output for ${request.ide}.\nDelimiter: --- START OF FILE: output ---`;
   }
 
   return prompt;
-}
+};
 
-// --- 3. Provider Abstractions ---
+export const generateRulesStream = async (request: GenerationRequest, onChunk: (text: string) => void): Promise<void> => {
+  const key = getGeminiKey();
+  if (!key) throw new Error("Gemini API Key missing (process.env.API_KEY).");
 
-interface IContentGenerator {
-  generateStream(
-    prompt: string, 
-    systemPrompt: string, 
-    config: AiConfiguration, 
-    onChunk: (text: string) => void
-  ): Promise<void>;
-}
+  const ai = new GoogleGenAI({ apiKey: key });
+  const systemPrompt = getSystemPrompt(request.ide);
+  const userPrompt = constructPrompt(request);
 
-// --- GEMINI IMPLEMENTATION ---
-class GeminiProvider implements IContentGenerator {
-  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
-    const key = config.apiKey || Env.get('VITE_GEMINI_API_KEY');
-    if (!key) throw new Error("Gemini API Key missing. Add VITE_GEMINI_API_KEY to .env or settings.");
-
-    const genAI = new GoogleGenAI({ apiKey: key });
-    
-    const responseStream = await genAI.models.generateContentStream({
+  try {
+    const responseStream = await ai.models.generateContentStream({
       model: 'gemini-3-pro-preview',
-      contents: prompt,
+      contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
-        temperature: 0.2,
+        thinkingConfig: { thinkingBudget: 16000 }
       }
     });
 
     for await (const chunk of responseStream) {
       if (chunk.text) onChunk(chunk.text);
     }
-  }
-}
-
-// --- OPENAI IMPLEMENTATION (Handles GPT-5.1 & Codex CLI) ---
-class OpenAIProvider implements IContentGenerator {
-  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
-    const key = config.apiKey || Env.get('VITE_OPENAI_API_KEY');
-    if (!key) throw new Error("OpenAI API Key missing. Add VITE_OPENAI_API_KEY to .env or settings.");
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-5.1', // Bleeding edge target
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        stream: true
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI API Error: ${response.statusText} - ${err}`);
-    }
-    await this.processSSE(response, onChunk);
-  }
-
-  protected async processSSE(response: Response, onChunk: (text: string) => void) {
-    const reader = response.body?.getReader();
-    if (!reader) return;
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
-          try {
-            const data = JSON.parse(trimmed.replace(/^data: /, ''));
-            const content = data.choices?.[0]?.delta?.content;
-            if (content) onChunk(content);
-          } catch (e) { /* ignore parse error */ }
-        }
-      }
-    }
-  }
-}
-
-// --- AZURE IMPLEMENTATION ---
-class AzureProvider extends OpenAIProvider {
-  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
-    const key = config.apiKey || Env.get('VITE_AZURE_API_KEY');
-    const endpoint = config.endpoint || Env.get('VITE_AZURE_ENDPOINT');
-    const deployment = config.deployment || Env.get('VITE_AZURE_DEPLOYMENT');
-    const version = config.apiVersion || '2025-01-01-preview';
-
-    if (!key || !endpoint || !deployment) throw new Error("Azure Config incomplete. Need Key, Endpoint, and Deployment.");
-
-    const url = `${endpoint.replace(/\/$/, '')}/openai/deployments/${deployment}/chat/completions?api-version=${version}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': key
-      },
-      body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        stream: true
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Azure API Error: ${response.statusText} - ${err}`);
-    }
-    await this.processSSE(response, onChunk);
-  }
-}
-
-// --- ANTHROPIC IMPLEMENTATION ---
-class AnthropicProvider implements IContentGenerator {
-  async generateStream(prompt: string, systemPrompt: string, config: AiConfiguration, onChunk: (text: string) => void) {
-    const key = config.apiKey || Env.get('VITE_ANTHROPIC_API_KEY');
-    if (!key) throw new Error("Anthropic API Key missing.");
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'dangerously-allow-browser': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-4.5-sonnet',
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }],
-        stream: true
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-       if (err.includes('CORS') || response.status === 0) {
-         throw new Error("CORS Error: Browser blocked Anthropic API. Please use a proxy.");
-       }
-      throw new Error(`Claude API Error: ${response.statusText} - ${err}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) return;
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('data: ')) {
-          try {
-             const data = JSON.parse(trimmed.replace(/^data: /, ''));
-             if (data.type === 'content_block_delta') {
-               onChunk(data.delta?.text || '');
-             }
-          } catch (e) { /* ignore */ }
-        }
-      }
-    }
-  }
-}
-
-// --- 4. Service Factory & Public Exports ---
-
-const getProviderImplementation = (provider: AiProvider): IContentGenerator => {
-  switch (provider) {
-    case AiProvider.GEMINI: return new GeminiProvider();
-    case AiProvider.OPENAI: 
-    case AiProvider.CODEX_CLI: return new OpenAIProvider();
-    case AiProvider.AZURE: return new AzureProvider();
-    case AiProvider.CLAUDE: return new AnthropicProvider();
-    default: throw new Error(`Provider ${provider} not supported`);
+  } catch (error: any) {
+    console.error("Gemini Generation Error:", error);
+    throw new Error(error.message || "An error occurred during rule generation.");
   }
 };
 
-/**
- * Main entry point for generating rules via the selected provider.
- */
-export const generateRulesStream = async (
-  request: GenerationRequest, 
-  onChunk: (text: string) => void
-): Promise<void> => {
-  const providerImpl = getProviderImplementation(request.aiConfig.provider);
-  const systemPrompt = getSystemPrompt(request.ide);
-  const userPrompt = constructPrompt(request);
-  
-  await providerImpl.generateStream(userPrompt, systemPrompt, request.aiConfig, onChunk);
-};
-
-/**
- * Analyze context using a cheap/fast model (Defaulting to Gemini for analysis)
- */
 export const analyzeContext = async (context: string): Promise<AnalysisResponse> => {
-  // Defaults to using the internal Gemini key for analysis regardless of selected provider
-  // to save user tokens on other platforms.
-  const key = Env.get('VITE_GEMINI_API_KEY');
-  if (!key) throw new Error("Analysis requires VITE_GEMINI_API_KEY");
+  const key = getGeminiKey();
+  if (!key) throw new Error("Gemini API Key missing (process.env.API_KEY).");
 
-  const genAI = new GoogleGenAI({ apiKey: key });
-  const prompt = `
-    You are a Senior Architect.
-    Analyze this context: "${context}"
-    Is there enough info to generate framework-specific rules?
-    Return JSON: { "status": "READY" | "NEEDS_INFO", "questions": [], "summary": "" }
-  `;
+  const ai = new GoogleGenAI({ apiKey: key });
+  const prompt = `Analyze this project context and determine if it is ready for AI rule generation: "${context}". If missing info (like stack details), ask specific questions. Return strictly valid JSON.`;
 
-  const response = await genAI.models.generateContent({
-    model: 'gemini-2.5-flash', // Cheap model for analysis
-    contents: prompt,
-    config: { 
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          status: {
-            type: Type.STRING,
-            enum: ['READY', 'NEEDS_INFO'],
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: { 
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            status: { type: Type.STRING, enum: ['READY', 'NEEDS_INFO'] },
+            questions: { type: Type.ARRAY, items: { type: Type.STRING } },
+            summary: { type: Type.STRING },
           },
-          questions: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-          },
-          summary: {
-            type: Type.STRING,
-          },
+          required: ['status'],
         },
-        required: ['status'],
-      },
-    }
-  });
+      }
+    });
 
-  if (!response.text) throw new Error("Failed to analyze context");
-  return JSON.parse(response.text) as AnalysisResponse;
+    const text = response.text;
+    if (!text) throw new Error("Empty response from AI analysis.");
+    return JSON.parse(text) as AnalysisResponse;
+  } catch (error: any) {
+    console.error("Context Analysis Error:", error);
+    throw new Error(error.message || "Failed to analyze context.");
+  }
 };

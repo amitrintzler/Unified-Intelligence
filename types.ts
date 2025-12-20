@@ -3,7 +3,7 @@ export enum IdeType {
   CURSOR = 'Cursor (.cursorrules)',
   COPILOT = 'GitHub Copilot (copilot-instructions.md)',
   AGENTS = 'Autonomous Agents (agents.md)',
-  CLAUDE = 'Claude (Anthropic Skills)',
+  CLAUDE = 'Claude (Anthropic Skill Standard)',
   CODEX = 'OpenAI Codex (Instruction Skills)'
 }
 
@@ -20,15 +20,15 @@ export enum TemplateType {
 }
 
 export enum AiProvider {
-  GEMINI = 'Google Gemini (3 Pro Preview)',
-  OPENAI = 'OpenAI (GPT-5.1)',
-  AZURE = 'Azure OpenAI (GPT-5.1)',
-  CLAUDE = 'Anthropic Claude (4.5 Sonnet)',
-  CODEX_CLI = 'Codex CLI (Bleeding Edge)'
+  GEMINI = 'Google Gemini (3 Pro)',
+  OPENAI = 'OpenAI (GPT-4o/5)',
+  AZURE = 'Azure OpenAI',
+  CLAUDE = 'Anthropic Claude',
+  CODEX_CLI = 'OpenAI Codex Skill'
 }
 
 export enum OutputStyle {
-  XML = 'Strict XML (Best for Agents/Claude)',
+  XML = 'Strict XML (Best for Skills/Agents)',
   MARKDOWN = 'Standard Markdown (Best for Copilot/GPT)',
   JSON = 'Strict JSON (Best for API/Schema)'
 }
@@ -36,9 +36,9 @@ export enum OutputStyle {
 export interface AiConfiguration {
   provider: AiProvider;
   apiKey?: string;
-  endpoint?: string; // For Azure/Custom
-  deployment?: string; // For Azure
-  apiVersion?: string; // For Azure
+  endpoint?: string; 
+  deployment?: string; 
+  apiVersion?: string; 
 }
 
 export interface GenerationRequest {
